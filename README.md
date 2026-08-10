@@ -3,7 +3,7 @@
 Marketing site and hosted build of the CircuitCoach breadboard simulator, built
 for the 2026 IEEE Metaverse Grand Challenge for Simulation-Based Learning.
 
-Live: https://circuitcoach-site.vercel.app
+Live: https://circuitcoach.vercel.app
 
 ## Layout
 
