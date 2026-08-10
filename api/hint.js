@@ -8,6 +8,8 @@
  * answers 503 and the front end simply shows the tutor as offline.
  */
 
+import { clientIp, take, LIMITS as RATE } from './_ratelimit.js';
+
 const ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent';
 
@@ -176,6 +178,22 @@ export default async function handler(req, res) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     return res.status(503).json({ error: 'tutor not configured on this deployment' });
+  }
+
+  /* the endpoint is public and spends real quota, so cap it before doing work */
+  const ip = clientIp(req);
+  const gate = take(ip);
+  if (!gate.ok) {
+    res.setHeader('Retry-After', String(gate.retryAfter));
+    console.warn('rate limited (%s) ip=%s retry=%ds', gate.scope, ip, gate.retryAfter);
+    return res.status(429).json({
+      error: 'hint limit reached, try again shortly',
+      retryAfter: gate.retryAfter
+    });
+  }
+  res.setHeader('X-RateLimit-Limit', String(RATE.PER_IP));
+  if (typeof gate.remaining === 'number') {
+    res.setHeader('X-RateLimit-Remaining', String(gate.remaining));
   }
 
   let raw = req.body;

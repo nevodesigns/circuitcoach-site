@@ -55,6 +55,20 @@ words the hint. It carries the same hardening:
   generic message
 - the model list falls through on a 404 or 429, because free tier per model
   quotas move around
+- the endpoint is rate limited before it does any work, since it is public and
+  spends real quota
+
+### Rate limiting
+
+`/api/hint` is public and every call costs quota, so `api/_ratelimit.js` caps it
+at 8 hints per IP and 60 per warm instance in a rolling ten minute window, and
+answers 429 with a `Retry-After` when either ceiling is hit. The front end
+degrades quietly, showing the tutor as unreachable for that attempt.
+
+The counters live in the memory of one serverless instance, so these are per
+instance ceilings rather than a global guarantee. That is enough to stop one
+visitor draining the key. For a hard global cap, back the two Map lookups with
+Vercel KV or Upstash.
 
 ### Environment
 
@@ -67,6 +81,12 @@ Set them on Vercel with:
 
 ```
 vercel env add GEMINI_API_KEY production
+```
+
+## Checks
+
+```
+node tools/check.js     # request validation and the rate limiter, no network
 ```
 
 ## Deploying
