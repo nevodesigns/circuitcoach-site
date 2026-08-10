@@ -21,9 +21,14 @@ The simulator under `app/` is a copy. The source of truth, along with the full
 test suite, lives in the main repository:
 https://github.com/nevodesigns/circuitcoach
 
-The only change made to the vendored copy is in `app/js/app.js`: the tutor
-endpoint discovery probes same-origin `/api` and no longer falls back to
-`127.0.0.1:5000`, since there is no local Flask server on a hosted deploy.
+Two changes were made to the vendored copy, both hosting adaptations:
+
+- `app/js/app.js`: tutor endpoint discovery probes same-origin `/api` and no
+  longer falls back to `127.0.0.1:5000`, since there is no local Flask server on
+  a hosted deploy.
+- `app/index.html`: a `<base href="/app/">` was added. `cleanUrls` redirects
+  `/app/` to `/app`, which would otherwise resolve the relative `js/` and `css/`
+  paths against the site root.
 
 ## Running it locally
 
