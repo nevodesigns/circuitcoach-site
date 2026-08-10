@@ -26,6 +26,12 @@ function prune(list, now) {
 }
 
 export function clientIp(req) {
+  /* Vercel sets x-vercel-forwarded-for itself and it cannot be influenced by
+     the caller. x-forwarded-for is also normalised by the platform, but prefer
+     the vendor header so this stays correct behind any other proxy too. */
+  const trusted = req.headers['x-vercel-forwarded-for'];
+  if (typeof trusted === 'string' && trusted.length) return trusted.split(',')[0].trim();
+
   const fwd = req.headers['x-forwarded-for'];
   if (typeof fwd === 'string' && fwd.length) return fwd.split(',')[0].trim();
   if (Array.isArray(fwd) && fwd.length) return String(fwd[0]).trim();
