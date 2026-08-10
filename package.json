@@ -1,0 +1,12 @@
+{
+  "name": "circuitcoach-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing site and hosted build of the CircuitCoach breadboard simulator",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "python3 -m http.server 4000",
+    "check": "node tools/check.js"
+  }
+}
