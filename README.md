@@ -23,7 +23,7 @@ This is the **hosting and deployment repository** for CircuitCoach, containing t
 
 ```
 .github/                     GitHub workflows and templates
-.dependabot.yml              Dependabot configuration
+.github/dependabot.yml       Dependabot configuration
 api/
   hint.js                    Serverless tutor endpoint (Gemini proxy)
   health.js                  Tutor availability check
@@ -193,9 +193,6 @@ To disable the tutor (e.g., to avoid API costs):
 - Leave `GEMINI_API_KEY` unset in the Vercel environment.
 - The `/api/health` endpoint will report `keyLoaded: false`.
 - The front end will show the tutor as offline, and the user can still solve all puzzles.
-```
-
-The site is static plus two Node functions, so it needs no build step.
 
 ## The demo video
 
