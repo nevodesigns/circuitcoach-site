@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+type: software
+title: "CircuitCoach Site"
+abstract: "Hosted site and deployment configuration for CircuitCoach"
+authors:
+  - family-names: "Nwokolo"
+    given-names: "Victor Oluebubechukwu"
+repository-code: "https://github.com/nevodesigns/circuitcoach-site"
+url: "https://circuitcoach.vercel.app"
+license: MIT

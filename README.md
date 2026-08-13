@@ -1,103 +1,198 @@
-# CircuitCoach site
+# CircuitCoach Site
 
-Marketing site and hosted build of the CircuitCoach breadboard simulator, built
-for the 2026 IEEE Metaverse Grand Challenge for Simulation-Based Learning.
+Hosted site and deployment configuration for CircuitCoach.
 
-Live: https://circuitcoach.vercel.app
+**Live**: https://circuitcoach.vercel.app
+
+**Canonical simulator repository**: https://github.com/nevodesigns/circuitcoach
+
+---
+
+## Repositories
+
+This is the **hosting and deployment repository** for CircuitCoach, containing the live site and serverless tutor backend.
+
+- **[CircuitCoach](https://github.com/nevodesigns/circuitcoach)** (canonical): The primary simulator repository with full source code, test suite, and circuit logic.
+- **CircuitCoach Site** (this repository): Hosting configuration, marketing site, deployment setup, and serverless API.
+
+**Simulator logic changes should normally happen in the canonical repository.** This repository maintains only a deployment-specific copy of the simulator (`app/` directory).
+
+---
 
 ## Layout
 
 ```
-index.html            the landing page
-styles/site.css       design tokens and all styling
-app/                  vendored copy of the simulator, served at /app
-api/hint.js           serverless port of the Flask hint proxy
-api/health.js         tells the front end whether a tutor is configured
-assets/               demo video, poster, screenshots, transcript, favicon
-vercel.json           cache and security headers
+.github/                     GitHub workflows and templates
+.dependabot.yml              Dependabot configuration
+api/
+  hint.js                    Serverless tutor endpoint (Gemini proxy)
+  health.js                  Tutor availability check
+  _ratelimit.js              Rate limiter for public API
+app/                         Deployment copy of the simulator (served at /app)
+  index.html
+  js/                        app.js, board.js, challenges.js, circuit.js
+  css/                       main.css
+assets/                      Demo media, transcript, screenshots, favicon
+styles/
+  site.css                   Marketing site styling
+tools/
+  check.js                   Local validation and rate limiter tests
+index.html                   Marketing landing page
+vercel.json                  Cache headers, security policies, routing
+package.json                 Project metadata and scripts
+README.md                    This file
+CONTRIBUTING.md              Contribution guidelines
+SECURITY.md                  Security policy and hardening
+CODE_OF_CONDUCT.md           Community standards
+THIRD_PARTY_NOTICES.md       License and attribution for third-party assets
+CITATION.cff                 Citation metadata
 ```
 
-The simulator under `app/` is a copy. The source of truth, along with the full
-test suite, lives in the main repository:
-https://github.com/nevodesigns/circuitcoach
+---
 
-Two changes were made to the vendored copy, both hosting adaptations:
+## Local Development
 
-- `app/js/app.js`: tutor endpoint discovery probes same-origin `/api` and no
-  longer falls back to `127.0.0.1:5000`, since there is no local Flask server on
-  a hosted deploy.
-- `app/index.html`: a `<base href="/app/">` was added. `cleanUrls` redirects
-  `/app/` to `/app`, which would otherwise resolve the relative `js/` and `css/`
-  paths against the site root.
+### Prerequisites
 
-## Running it locally
+- Node.js 18+
+- Python 3 (for simple HTTP server)
 
-```
-npm run dev          # python3 -m http.server 4000
+### Running the Site
+
+```bash
+npm run dev                  # Starts Python HTTP server on http://localhost:4000
 ```
 
-That serves the static site, so Tiers 1 through 3 are fully playable. The AI
-tutor needs the serverless functions, which a plain static server does not run,
-so the tutor panel will correctly report OFFLINE.
+This serves the static site completely. Tiers 1–3 of the simulator work offline. The AI tutor requires serverless functions:
 
-To exercise the tutor locally, use the Vercel dev server instead:
-
-```
-npx vercel dev
+```bash
+npx vercel dev              # Full Vercel dev environment (includes /api)
 ```
 
-## The AI tutor
+---
 
-`api/hint.js` is a faithful port of `server/app.py` from the main repository.
-The escalation decision stays deterministic in the browser; this endpoint only
-words the hint. It carries the same hardening:
+## Environment
 
-- the key is read from the environment and never returned to the client
-- the fault code is matched against `^[a-z_]{1,40}$`, so no prompt injection
-  survives into the prompt
-- readings and previous hints are capped in both count and length
-- upstream provider errors are logged server side, and the client gets a short
-  generic message
-- the model list falls through on a 404 or 429, because free tier per model
-  quotas move around
-- the endpoint is rate limited before it does any work, since it is public and
-  spends real quota
-
-### Rate limiting
-
-`/api/hint` is public and every call costs quota, so `api/_ratelimit.js` caps it
-at 8 hints per IP and 60 per warm instance in a rolling ten minute window, and
-answers 429 with a `Retry-After` when either ceiling is hit. The front end
-degrades quietly, showing the tutor as unreachable for that attempt.
-
-The counters live in the memory of one serverless instance, so these are per
-instance ceilings rather than a global guarantee. That is enough to stop one
-visitor draining the key. For a hard global cap, back the two Map lookups with
-Vercel KV or Upstash.
-
-### Environment
+The tutor endpoint (`/api/hint`) is optional and requires configuration:
 
 | Variable | Required | Notes |
 |---|---|---|
-| `GEMINI_API_KEY` | for the tutor | Without it `/api/hint` answers 503 and the tutor shows as offline. Tiers 1 to 3 are unaffected. |
-| `GEMINI_MODEL` | no | Pins a single model instead of the fallback chain. |
+| `GEMINI_API_KEY` | for tutor | Without it, `/api/hint` returns 503 and the tutor shows as offline. Puzzles 1–3 remain playable. **Must stay server-side.** |
+| `GEMINI_MODEL` | no | Pins a single model. Defaults to a fallback chain (`gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-2.0-flash`, `gemini-pro-latest`). |
 
-Set them on Vercel with:
+### Setting Environment Variables on Vercel
 
-```
+```bash
 vercel env add GEMINI_API_KEY production
+vercel env add GEMINI_MODEL production
 ```
+
+Or set directly in the [Vercel Dashboard](https://vercel.com) under Project Settings → Environment Variables.
+
+---
 
 ## Checks
 
-```
-node tools/check.js     # request validation and the rate limiter, no network
+Local validation (no network required):
+
+```bash
+npm run check
 ```
 
-## Deploying
+This runs:
+- Request sanitization and validation tests
+- Rate limiter tests
+- No-op checks if `GEMINI_API_KEY` is missing
 
+---
+
+## The API Tutor
+
+### Architecture
+
+`api/hint.js` is a faithful serverless port of `server/app.py` from the canonical repository. The browser makes deterministic escalation decisions; this endpoint only generates the hint wording.
+
+### Security Hardening
+
+- **Key isolation**: `GEMINI_API_KEY` is read from the environment and never returned to the client.
+- **Prompt injection defense**: Fault codes are validated against `^[a-z_]{1,40}$` before reaching the prompt.
+- **Input capping**: Readings and previous hints are limited by count and length.
+- **Error handling**: Upstream errors are logged server-side; clients receive only generic messages.
+- **Model fallthrough**: If a model hits 404 or 429, the endpoint tries the next model in the chain.
+- **Rate limiting**: Public endpoint is rate-limited to prevent quota exhaustion.
+
+### Rate Limiting
+
+`api/_ratelimit.js` enforces two ceilings on `/api/hint`:
+
+- **Per-IP limit**: 8 hints per IP per 10-minute window
+- **Per-instance limit**: 60 hints per warm serverless instance per 10-minute window
+
+When either limit is reached, the endpoint returns `429 Too Many Requests` with a `Retry-After` header. The front end degrades gracefully, showing the tutor as unreachable.
+
+**Note**: Counters live in instance memory, so these are per-instance ceilings. For multi-instance deployments or high traffic, back the counters with Vercel KV or Upstash for true global guarantees.
+
+### Simulator Changes
+
+Two changes were made to the `app/` simulator copy for hosting:
+
+1. **`app/js/app.js`**: Tutor endpoint discovery probes same-origin `/api` instead of falling back to `127.0.0.1:5000`.
+2. **`app/index.html`**: Added `<base href="/app/">` for correct relative path resolution.
+
+---
+
+## Deployment
+
+### Prerequisites for Production
+
+- `GEMINI_API_KEY` configured in Vercel environment (if tutor is desired)
+- `.env` must never be committed
+- All checks pass: `npm run check`
+- Security headers in `vercel.json` are intact
+
+### Deploy to Vercel
+
+```bash
+vercel --prod
 ```
-npx vercel --prod
+
+Or connect this repository to Vercel for automatic deployments on `main` branch.
+
+---
+
+## Open Source
+
+This repository is released under the [MIT License](./LICENSE).
+
+### License Summary
+
+- **Source code**: MIT licensed.
+- **Third-party assets**: Remain under their own licenses (see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)).
+- **External services**: Google Gemini, Vercel, and Google Fonts are not covered by the MIT license and are subject to their own terms.
+
+### Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines and [SECURITY.md](./SECURITY.md) for security policies.
+
+---
+
+## Relationship to CircuitCoach
+
+- **This repository**: Hosting, deployment, serverless API, and marketing site for CircuitCoach.
+- **[Canonical simulator](https://github.com/nevodesigns/circuitcoach)**: Full source, test suite, and circuit logic. The authority for simulator behavior.
+
+Do not assume this repository independently contains the canonical simulator. Always refer to the main repository for simulator logic questions, bug reports, and feature requests.
+
+---
+
+## Optional: Gemini Configuration
+
+The tutor is **optional**. The simulator and all three tiers are fully playable without it.
+
+To disable the tutor (e.g., to avoid API costs):
+- Leave `GEMINI_API_KEY` unset in the Vercel environment.
+- The `/api/health` endpoint will report `keyLoaded: false`.
+- The front end will show the tutor as offline, and the user can still solve all puzzles.
 ```
 
 The site is static plus two Node functions, so it needs no build step.
