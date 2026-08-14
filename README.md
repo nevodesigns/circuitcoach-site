@@ -196,7 +196,16 @@ To disable the tutor (e.g., to avoid API costs):
 
 ## The demo video
 
-`assets/demo.mp4` is the silent cut, 6:20, recorded against the live
-application. The AI hints in it are real generated output. It is intended to be
-replaced with the narrated edit; the timed voiceover script is in
-`assets/demo-transcript.md`.
+The demo is the narrated cut, 7:00, 1920x1080, recorded against the live
+application. The AI hints in it are real generated output, and the two magnified
+callouts on the tutor panel are taken from the master at native resolution.
+
+It is not committed here. A 29 MB binary would sit in git history forever and
+would ship on every clone, so the page embeds it from Drive instead and the repo
+stays light:
+
+    https://drive.google.com/file/d/1WT-SwZnsOa9xi0q7tVR66DdekDq84F2D/view
+
+That means `frame-src https://drive.google.com` is present in the CSP in
+`vercel.json`, and nothing else is allowed to frame. The timed voiceover script
+is in `assets/demo-transcript.md`.

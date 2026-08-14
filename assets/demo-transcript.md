@@ -1,11 +1,17 @@
 # CircuitCoach demo, voiceover transcript
 
-Companion to `circuitcoach_demo.mp4`. Runtime is exactly **6:20**, 1920 by 1080,
-H.264. Written for roughly 140 words per minute, a relaxed technical pace.
+Written for roughly 140 words per minute, a relaxed technical pace. Every number
+quoted is real and verifiable in the repository.
 
-Every timecode below was measured against the finished video, not estimated, so
-each line lands on the action it describes. Every number quoted is real and
-verifiable in the repository.
+**The timecodes below are for the original 6:20 screen recording, not for the
+published cut.** The published video runs 7:00 and opens with a 46 second piece
+to camera, then plays the same recording 1.5 percent faster. To find a line in
+the published video:
+
+    published = (original + 46.3) / 1.015
+
+So the Tier 2 opening at **1:46** here lands at about **2:47** there. The
+ordering and the wording are unchanged.
 
 ---
 
